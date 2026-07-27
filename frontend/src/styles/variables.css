@@ -1,0 +1,53 @@
+/* DarkWatch Pro — Design System: CSS Custom Properties */
+:root {
+  --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family-secondary: 'Poppins', sans-serif;
+  --font-family-display: 'Playfair Display', serif;
+  --font-family-mono: 'JetBrains Mono', monospace;
+  --fs-xs: 0.75rem; --fs-sm: 0.8rem; --fs-base: 0.9rem; --fs-md: 0.95rem;
+  --fs-lg: 1rem; --fs-xl: 1.1rem; --fs-2xl: 1.2rem; --fs-3xl: 1.5rem;
+  --fs-4xl: 1.8rem; --fs-5xl: 2rem; --fs-6xl: 2.25rem; --fs-7xl: 2.5rem;
+  --fs-8xl: 3rem; --fs-9xl: 3.5rem; --fs-10xl: 4rem;
+  --fw-normal: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700; --fw-extrabold: 800;
+  --lh-tight: 1.1; --lh-snug: 1.2; --lh-normal: 1.5; --lh-relaxed: 1.6; --lh-loose: 1.8;
+  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem;
+  --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem;
+  --space-12: 3rem; --space-16: 4rem; --space-20: 5rem; --space-24: 6rem;
+  --radius-sm: 4px; --radius-md: 6px; --radius-lg: 8px; --radius-xl: 12px;
+  --radius-2xl: 16px; --radius-3xl: 20px; --radius-full: 50%;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.1); --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
+  --shadow-lg: 0 8px 25px rgba(0,0,0,0.2); --shadow-xl: 0 20px 40px rgba(0,0,0,0.25);
+  --shadow-accent: 0 4px 16px rgba(111,66,193,0.3); --shadow-accent-lg: 0 10px 25px rgba(111,66,193,0.3);
+  --transition-fast: 0.15s ease; --transition-base: 0.3s ease; --transition-slow: 0.4s ease;
+  --z-dropdown: 100; --z-sidebar: 200; --z-navbar: 1000; --z-modal: 2000; --z-toast: 3000;
+  --sidebar-width: 250px; --container-max: 1200px; --container-wide: 1400px;
+  --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-tertiary: #111111; --bg-quaternary: #1a1a1a;
+  --border-color: #333333; --border-color-light: #444444; --border-color-dark: #222222;
+  --text-primary: #ffffff; --text-secondary: #cccccc; --text-muted: #a0a0a0; --text-disabled: #666666;
+  --accent-primary: #00ff88; --accent-secondary: #00cc6a; --accent-tertiary: #00ffaa; --accent-light: #33ff99;
+  --success: #00ff88; --success-light: #33ff99; --warning: #ff9500; --warning-light: #ffb74d;
+  --danger: #ff4444; --danger-light: #ff6b6b; --info: #00ccff; --info-light: #33d6ff;
+  --navbar-bg: rgba(10,10,10,0.95);
+  --sidebar-bg: var(--bg-secondary); --sidebar-border: var(--border-color);
+  --card-bg: var(--bg-secondary); --card-border: var(--border-color); --card-border-hover: var(--accent-primary);
+  --input-bg: var(--bg-tertiary); --input-border: var(--border-color); --input-focus-border: var(--accent-primary);
+  --btn-primary-bg: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  --btn-primary-color: var(--bg-primary); --btn-outline-border: var(--accent-primary); --btn-outline-color: var(--accent-primary);
+  --severity-critical-bg: rgba(239,68,68,0.2); --severity-critical-color: var(--danger);
+  --severity-high-bg: rgba(245,158,11,0.2); --severity-high-color: var(--warning);
+  --severity-medium-bg: rgba(59,130,246,0.2); --severity-medium-color: var(--info);
+  --severity-low-bg: rgba(16,185,129,0.2); --severity-low-color: var(--success);
+}
+[data-theme="light"] {
+  --bg-primary: #ffffff; --bg-secondary: #f8f9fa; --bg-tertiary: #f1f3f4; --bg-quaternary: #e8eaed;
+  --border-color: #dadce0; --border-color-light: #e8eaed; --border-color-dark: #9aa0a6;
+  --text-primary: #202124; --text-secondary: #5f6368; --text-muted: #9aa0a6; --text-disabled: #dadce0;
+  --accent-primary: #6f42c1; --accent-secondary: #5a32a3; --accent-tertiary: #8b5cf6; --accent-light: #a78bfa;
+  --success: #6f42c1; --success-light: #8b5cf6; --warning: #f59e0b; --warning-light: #fbbf24;
+  --danger: #ef4444; --danger-light: #f87171; --info: #3b82f6; --info-light: #60a5fa;
+  --navbar-bg: rgba(255,255,255,0.95);
+  --severity-critical-bg: rgba(239,68,68,0.2); --severity-critical-color: #ef4444;
+  --severity-high-bg: rgba(245,158,11,0.2); --severity-high-color: #f59e0b;
+  --severity-medium-bg: rgba(59,130,246,0.2); --severity-medium-color: #3b82f6;
+  --severity-low-bg: rgba(16,185,129,0.2); --severity-low-color: #10b981;
+}

@@ -1,0 +1,44 @@
+/* DarkWatch Pro — Landing Page Styles */
+.hero { padding: 140px 0 100px; background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%); text-align: center; position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.1; z-index: 1; background: radial-gradient(circle at 20% 50%, var(--accent-primary) 0%, transparent 50%), radial-gradient(circle at 80% 20%, var(--accent-secondary) 0%, transparent 50%); }
+.hero .container { position: relative; z-index: 2; }
+.hero h1 { font-size: var(--fs-10xl); font-weight: var(--fw-extrabold); margin-bottom: var(--space-6); background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary), var(--accent-primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: var(--lh-tight); }
+.hero p { font-size: var(--fs-2xl); color: var(--text-secondary); margin-bottom: var(--space-12); max-width: 700px; margin-left: auto; margin-right: auto; line-height: var(--lh-relaxed); }
+.hero-buttons { display: flex; gap: var(--space-6); justify-content: center; align-items: center; flex-wrap: wrap; }
+.hero-stats { display: flex; justify-content: center; gap: var(--space-12); margin-top: var(--space-16); flex-wrap: wrap; }
+.hero-stat { text-align: center; }
+.hero-stat-number { font-size: var(--fs-8xl); font-weight: var(--fw-bold); color: var(--accent-primary); margin-bottom: var(--space-2); }
+.hero-stat-label { color: var(--text-secondary); font-size: var(--fs-md); text-transform: uppercase; letter-spacing: 1px; }
+
+.features { padding: 100px 0; background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%); position: relative; }
+.features .container { position: relative; z-index: 2; }
+.section-title { text-align: center; font-size: var(--fs-8xl); font-weight: var(--fw-bold); margin-bottom: var(--space-4); color: var(--text-primary); }
+.section-subtitle { text-align: center; font-size: var(--fs-2xl); color: var(--text-secondary); margin-bottom: var(--space-16); max-width: 600px; margin-left: auto; margin-right: auto; }
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: var(--space-10); }
+
+.pricing { padding: 100px 0; background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%); position: relative; }
+.pricing .container { position: relative; z-index: 2; }
+.pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: var(--space-10); margin-top: var(--space-16); }
+
+.content-section { padding: 80px 0; }
+.content-section:nth-child(even) { background: var(--bg-tertiary); }
+.contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-16); margin-top: var(--space-12); }
+.contact-item { display: flex; align-items: center; margin-bottom: var(--space-6); padding: var(--space-4); background: var(--bg-secondary); border-radius: var(--radius-lg); border: 1px solid var(--border-color); }
+.contact-item i { font-size: var(--fs-4xl); color: var(--accent-primary); margin-right: var(--space-4); width: 30px; }
+
+.faq-item { background: var(--bg-secondary); margin-bottom: var(--space-4); border-radius: var(--radius-lg); border: 1px solid var(--border-color); overflow: hidden; }
+.faq-question { padding: var(--space-6); background: var(--bg-secondary); cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); font-weight: var(--fw-medium); transition: background-color var(--transition-base); }
+.faq-question:hover { background: var(--bg-tertiary); }
+
+.signup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-16); align-items: start; }
+
+@media (max-width: 768px) {
+  .hero h1 { font-size: var(--fs-7xl); }
+  .hero-stats { gap: var(--space-8); }
+  .features-grid { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .pricing-card.featured { transform: none; }
+  .contact-grid { grid-template-columns: 1fr; gap: var(--space-8); }
+  .signup-grid { grid-template-columns: 1fr; gap: var(--space-8); }
+  .social-login { flex-direction: column; }
+}

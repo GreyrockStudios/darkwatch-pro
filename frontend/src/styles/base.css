@@ -1,0 +1,15 @@
+/* Fonts loaded via <link> in index.html — no @import duplication */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 16px; scroll-behavior: smooth; }
+body { font-family: var(--font-family-primary); line-height: var(--lh-relaxed); background: var(--bg-primary); color: var(--text-primary); transition: background-color 0.3s ease, color 0.3s ease; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+a { color: var(--accent-primary); text-decoration: none; transition: color var(--transition-base); }
+a:hover { color: var(--accent-secondary); }
+img { max-width: 100%; height: auto; }
+ul, ol { list-style: none; }
+button { cursor: pointer; font-family: inherit; }
+input, select, textarea { font-family: inherit; font-size: inherit; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-tertiary); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: var(--radius-lg); }
+::-webkit-scrollbar-thumb:hover { background: var(--border-color-light); }
+::selection { background: var(--accent-primary); color: var(--bg-primary); }

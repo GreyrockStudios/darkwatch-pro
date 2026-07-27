@@ -1,0 +1,116 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_API_URL: /api/v1
+    image: darkwatch-frontend:latest
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: base
+    image: darkwatch-backend:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.dev
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-darkwatch-prod-secret-key-change-me}
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-True}
+      - POSTGRES_DB=${POSTGRES_DB:-darkwatch}
+      - POSTGRES_USER=${POSTGRES_USER:-darkwatch}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-darkwatch-secure-password-2025}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - FRONTEND_URL=http://darkwatch.greyrockstudios.com
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate &&
+              python manage.py seed_plans &&
+              python manage.py seed_demo_data &&
+              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120"
+
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: base
+    image: darkwatch-backend:latest
+    command: celery -A config worker -l info
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.dev
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-darkwatch-prod-secret-key-change-me}
+      - POSTGRES_DB=${POSTGRES_DB:-darkwatch}
+      - POSTGRES_USER=${POSTGRES_USER:-darkwatch}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-darkwatch-secure-password-2025}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - backend
+      - redis
+    restart: unless-stopped
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: base
+    image: darkwatch-backend:latest
+    command: celery -A config beat -l info
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.dev
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-darkwatch-prod-secret-key-change-me}
+      - POSTGRES_DB=${POSTGRES_DB:-darkwatch}
+      - POSTGRES_USER=${POSTGRES_USER:-darkwatch}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-darkwatch-secure-password-2025}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - backend
+      - redis
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-darkwatch}
+      - POSTGRES_USER=${POSTGRES_USER:-darkwatch}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-darkwatch-secure-password-2025}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U darkwatch"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
