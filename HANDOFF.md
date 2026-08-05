@@ -1,7 +1,7 @@
 # DarkWatch Pro — HANDOFF
 
 ## Project Status
-**Phase 3 Complete** — Full-stack app with auth flow, API integration, Stripe billing, Celery tasks, support tickets, and deployment config.
+**Phase 3 Complete / Dev-Ready** — Full-stack app with auth flow, API integration, Stripe billing endpoints, Celery tasks, support tickets, seeded demo data, and deployment config. Production still depends on real Stripe keys/price IDs/webhook testing, email/SMS/webhook providers, threat-intel/search providers, SSL, CI/CD, and E2E coverage.
 
 ## Quick Start
 ```bash
@@ -23,8 +23,8 @@ password: demo123
 ## Architecture
 - **Backend**: Django 5.x + DRF + Celery + PostgreSQL
 - **Frontend**: React 19 + TypeScript + Zustand + Vite
-- **Billing**: Stripe Checkout + Webhooks
-- **Deploy**: Docker + Nginx
+- **Billing**: Stripe Checkout + webhook code; requires configured keys, price IDs, and webhook endpoint validation
+- **Deploy**: Docker + Nginx; production compose uses `config.settings.prod`
 
 ## Key Files
 | Area | Path | Purpose |
@@ -44,8 +44,17 @@ password: demo123
 - **Phase 2**: Backend API (Django + DRF, all models/views/serializers)
 - **Phase 3**: Auth flow, API integration, Stripe, Celery, deployment prep
 
+## Known Demo/Mock Areas
+- Search stores history, decrements credits, and reports missing provider configuration instead of showing fake hits
+- Monitor checks report missing provider configuration until live threat intelligence is wired
+- Domain Intel and Domain Security pages show provider-required unavailable states until analysis is wired
+- Team invite and alert notification endpoints require a configured email provider before they return success
+- SMS tests and webhook tests are unavailable until provider-backed implementations exist
+- Report generation/download is unavailable until a report backend is configured
+- Billing plan data is seeded locally; real subscription changes require Stripe configuration and webhook testing
+
 ## Next Steps
-- Domain intel pages (wire to search API)
+- Domain intel pages (wire to real backend/provider data)
 - Report PDF generation
 - Team invite email flow
 - Production deploy testing

@@ -2,9 +2,21 @@
 
 Dark web monitoring & breach detection platform. React + Django application.
 
+## Current Status
+
+DarkWatch Pro is **Phase 3 complete and dev-ready**. The local environment supports the full React/Django flow: JWT auth, protected pages, API-backed dashboard/search/monitoring/alerts/reports/team/billing/support views, seeded demo data, Celery workers, and Docker Compose.
+
+Production use still depends on real external services and deployment hardening:
+
+- Stripe checkout/webhooks require live Stripe keys, real price IDs, and webhook endpoint testing.
+- Email/SMS/webhook notifications and team invites are unavailable until a production provider is configured and wired.
+- Threat intelligence/search/monitor checking is honest about missing provider configuration and needs real provider integration for production-grade data.
+- Report generation/download is unavailable until a report backend is configured.
+- Domain Intel and Domain Security are disabled until provider-backed analysis exists.
+
 ## Architecture
 
-- **Frontend**: React 18 + TypeScript + Vite + Zustand
+- **Frontend**: React 19 + TypeScript + Vite + Zustand
 - **Backend**: Django 5 + Django REST Framework
 - **Database**: PostgreSQL
 - **Cache/Queue**: Redis + Celery
@@ -22,6 +34,19 @@ docker compose up --build
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8000
 - Django Admin: http://localhost:8000/admin/
+
+Seed demo data after the backend is up:
+
+```bash
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py seed_plans
+docker compose exec backend python manage.py seed_demo_data
+```
+
+Demo login:
+
+- Email: `demo@darkwatchpro.com`
+- Password: `demo123`
 
 ### Manual Development
 
@@ -41,6 +66,8 @@ python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
+python manage.py seed_plans
+python manage.py seed_demo_data
 python manage.py createsuperuser
 python manage.py runserver
 ```
@@ -124,7 +151,17 @@ The app uses CSS custom properties for theming with a dark/light mode toggle. Se
 
 ## Phase Status
 
-- ✅ Phase 1: Scaffolding + Design System Extraction
-- ⬜ Phase 2: Component implementation (real React components matching original HTML)
-- ⬜ Phase 3: Backend API implementation
-- ⬜ Phase 4: Integration, auth, real data
+- ✅ Phase 1: Scaffolding + design system extraction
+- ✅ Phase 2: React page implementation + backend models/API
+- ✅ Phase 3: Auth flow, API integration, Stripe/Celery/support/deploy prep
+- ⬜ Phase 4: Production integrations, hardening, CI/CD, and E2E coverage
+
+## Known Demo/Mock Areas
+
+- Search stores history, decrements credits, and returns an explicit provider-not-configured state until live threat intelligence is wired.
+- Monitor checks return an explicit provider-not-configured state until live threat intelligence is wired.
+- Domain Intel and Domain Security are frontend unavailable states until provider-backed analysis exists.
+- Team invites and alert notifications require a configured email provider before they return success.
+- SMS tests and webhook tests are unavailable until provider-backed implementations exist.
+- Billing plans/subscriptions are persisted locally, but real plan changes require configured Stripe price IDs and live webhook testing.
+- Report generation/download is unavailable until a report backend exists.

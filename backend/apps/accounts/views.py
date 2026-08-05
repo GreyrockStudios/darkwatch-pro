@@ -49,9 +49,8 @@ class UserViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=['post'], url_path='2fa/enable')
     def enable_2fa(self, request):
-        """Stub endpoint for 2FA enable — returns placeholder."""
+        """Report that 2FA is unavailable until a provider is wired."""
         return Response({
-            'detail': '2FA enable is not yet implemented',
-            'secret': '',
-            'qr_code_url': '',
-        })
+            'error': '2FA is not configured',
+            'detail': 'Two-factor enrollment is unavailable until a 2FA provider is configured.',
+        }, status=status.HTTP_501_NOT_IMPLEMENTED)

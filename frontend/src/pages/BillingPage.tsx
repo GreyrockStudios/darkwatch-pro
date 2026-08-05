@@ -11,16 +11,10 @@ const defaultUsage: Usage = {
   api_calls: { used: 0, limit: 10000 },
 };
 
-const invoices = [
-  { id: 'INV-2024-001', date: 'Jul 1, 2026', amount: '$79.00', status: 'paid' as const, plan: 'Professional' },
-];
-
 export default function BillingPage() {
-  const addToast = useAppStore((s) => s.addToast);
   const user = useAppStore((s) => s.user);
   const credits = user?.credits ?? 0;
   const [showChangePlan, setShowChangePlan] = useState(false);
-  const [showAddPayment, setShowAddPayment] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState<Usage>(defaultUsage);
@@ -131,20 +125,11 @@ export default function BillingPage() {
       <div className="card">
         <div className="card-header">
           <h3 className="card-title">Payment Methods</h3>
-          <button className="btn btn-primary" onClick={() => setShowAddPayment(true)}><i className="fas fa-plus"></i> Add Payment Method</button>
+          <button className="btn btn-primary" disabled title="Payment provider integration is not configured"><i className="fas fa-plus"></i> Add Payment Method</button>
         </div>
         <div style={{ padding: '1.5rem', border: '1px solid var(--border-color)', borderRadius: '12px', background: 'var(--bg-primary)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h4 style={{ marginBottom: '0.25rem' }}>Demo Card ending in 4242</h4>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Expires 12/26</div>
-              <span style={{ color: 'var(--success)', fontSize: '0.85rem', marginTop: '0.25rem', display: 'inline-block' }}>Default</span>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button className="btn btn-outline btn-sm">Edit</button>
-              <button className="btn btn-danger btn-sm" style={{ background: 'var(--danger)', color: 'var(--bg-primary)' }}>Remove</button>
-            </div>
-          </div>
+          <h4 style={{ marginBottom: '0.5rem' }}>Payment provider not configured</h4>
+          <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Payment methods will appear here after Stripe or another billing provider is connected.</p>
         </div>
       </div>
 
@@ -153,27 +138,8 @@ export default function BillingPage() {
         <div className="card-header">
           <h3 className="card-title">Invoice History</h3>
         </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid var(--border-color)', background: 'var(--bg-tertiary)', fontWeight: 600 }}>Invoice</th>
-                <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid var(--border-color)', background: 'var(--bg-tertiary)', fontWeight: 600 }}>Date</th>
-                <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid var(--border-color)', background: 'var(--bg-tertiary)', fontWeight: 600 }}>Amount</th>
-                <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid var(--border-color)', background: 'var(--bg-tertiary)', fontWeight: 600 }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((inv) => (
-                <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '1rem' }}>{inv.id}</td>
-                  <td style={{ padding: '1rem' }}>{inv.date}</td>
-                  <td style={{ padding: '1rem' }}>{inv.amount}</td>
-                  <td style={{ padding: '1rem' }}><span className="badge badge-active">{inv.status.charAt(0).toUpperCase() + inv.status.slice(1)}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ padding: '1.5rem', color: 'var(--text-secondary)' }}>
+          Invoice history is unavailable until a billing provider is connected.
         </div>
       </div>
 
@@ -188,8 +154,8 @@ export default function BillingPage() {
                   <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{plan.name}</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}>${plan.price}<span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>/mo</span></div>
                 </div>
-                <button className={`btn ${plan.name.toLowerCase() === planName.toLowerCase() ? 'btn-primary' : 'btn-outline'}`}>
-                  {plan.name.toLowerCase() === planName.toLowerCase() ? 'Current Plan' : 'Select'}
+                <button className={`btn ${plan.name.toLowerCase() === planName.toLowerCase() ? 'btn-primary' : 'btn-outline'}`} disabled>
+                  {plan.name.toLowerCase() === planName.toLowerCase() ? 'Current Plan' : 'Unavailable'}
                 </button>
               </div>
               <ul style={{ listStyle: 'none', marginTop: '1rem' }}>
@@ -200,21 +166,6 @@ export default function BillingPage() {
         </div>
       </Modal>
 
-      {/* Add Payment Modal */}
-      <Modal isOpen={showAddPayment} onClose={() => setShowAddPayment(false)} title="Add Payment Method" maxWidth="600px">
-        <form onSubmit={(e) => { e.preventDefault(); addToast('info', 'Payment method integration coming soon'); setShowAddPayment(false); }}>
-          <div className="form-group"><label>Card Number</label><input type="text" placeholder="1234 5678 9012 3456" /></div>
-          <div className="form-row">
-            <div className="form-group"><label>Expiry Date</label><input type="text" placeholder="MM/YY" /></div>
-            <div className="form-group"><label>CVC</label><input type="text" placeholder="123" /></div>
-          </div>
-          <div className="form-group"><label>Cardholder Name</label><input type="text" placeholder="John Smith" /></div>
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Add Payment Method</button>
-            <button type="button" className="btn btn-outline" onClick={() => setShowAddPayment(false)} style={{ flex: 1 }}>Cancel</button>
-          </div>
-        </form>
-      </Modal>
     </>
   );
 }

@@ -1,35 +1,30 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '../stores/useAppStore';
 import { monitorsApi } from '../services/api';
-import { LoadingSpinner, PageSkeleton } from '../components';
+import { PageSkeleton } from '../components';
 import type { Monitor } from '../types';
-
-const fallbackMonitors = [
-  { id: '1', name: 'Executive Email Watch', type: 'email' as const, value: 'ceo@company.com', status: 'active' as const, created_at: '2024-01-01', last_checked: '2024-01-15', breach_count: 3 },
-  { id: '2', name: 'Company Domain', type: 'domain' as const, value: 'company.com', status: 'active' as const, created_at: '2024-01-02', last_checked: '2024-01-15', breach_count: 12 },
-  { id: '3', name: 'Admin Account', type: 'username' as const, value: 'admin_user', status: 'active' as const, created_at: '2024-01-03', last_checked: '2024-01-14', breach_count: 8 },
-  { id: '4', name: 'IT Admin Email', type: 'email' as const, value: 'it@company.com', status: 'paused' as const, created_at: '2024-01-04', last_checked: '2024-01-10', breach_count: 2 },
-  { id: '5', name: 'VPN IP Address', type: 'ip' as const, value: '203.0.113.42', status: 'active' as const, created_at: '2024-01-05', last_checked: '2024-01-15', breach_count: 0 },
-];
 
 export default function MonitoringPage() {
   const user = useAppStore((s) => s.user);
   const credits = user?.credits ?? 1247;
   const addToast = useAppStore((s) => s.addToast);
 
-  const [monitors, setMonitors] = useState<Monitor[]>(fallbackMonitors);
+  const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: '', type: 'email', value: '' });
 
   const loadMonitors = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const data = await monitorsApi.list();
       const list = Array.isArray(data) ? data : [];
-      setMonitors(list.length > 0 ? list : fallbackMonitors);
-    } catch {
-      // Use fallback on error
-      setMonitors(fallbackMonitors);
+      setMonitors(list);
+    } catch (err) {
+      setMonitors([]);
+      setLoadError(err instanceof Error ? err.message : 'Failed to load monitors');
     } finally {
       setLoading(false);
     }
@@ -59,7 +54,7 @@ export default function MonitoringPage() {
       setMonitors((prev) => prev.map((m) => m.id == id ? { ...m, status: action === 'start' ? 'active' as const : 'paused' as const } : m));
       addToast('success', `Monitor ${action === 'start' ? 'resumed' : 'paused'}`);
     } catch (err) {
-      addToast('error', 'Failed to update monitor');
+      addToast('error', err instanceof Error ? err.message : 'Failed to update monitor');
     }
   };
 
@@ -110,8 +105,20 @@ export default function MonitoringPage() {
 
       <div className="card">
         <div className="card-header"><h2 className="card-title">Active Monitors</h2><button className="btn btn-outline btn-sm">View All</button></div>
-        <div className="monitors-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem' }}>
-          {monitors.map((m) => (
+        {loadError ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+            <i className="fas fa-exclamation-triangle" style={{ fontSize: '2rem', marginBottom: '1rem', display: 'block', color: 'var(--danger)' }}></i>
+            <p style={{ marginBottom: '1rem' }}>{loadError}</p>
+            <button className="btn btn-outline btn-sm" onClick={loadMonitors}>Retry</button>
+          </div>
+        ) : monitors.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+            <i className="fas fa-shield-alt" style={{ fontSize: '2rem', marginBottom: '1rem', display: 'block' }}></i>
+            <p>No monitors yet. Create your first monitor above.</p>
+          </div>
+        ) : (
+          <div className="monitors-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem' }}>
+            {monitors.map((m) => (
             <div className="monitor-card" key={m.id}>
               <div className="monitor-header">
                 <div><div className="monitor-title">{m.name}</div><span className={`badge badge-${m.type}`} style={{ marginBottom: '0.5rem' }}>{m.type}</span></div>
@@ -133,8 +140,9 @@ export default function MonitoringPage() {
                 <button className="btn btn-sm" style={{ background: 'var(--danger)', color: 'white' }} onClick={() => handleDelete(m.id)}>Delete</button>
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

@@ -1,6 +1,6 @@
-import os
 import logging
 
+from django.conf import settings
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -13,7 +13,7 @@ from .serializers import PlanSerializer, SubscriptionSerializer
 
 logger = logging.getLogger(__name__)
 
-stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 class PlanViewSet(viewsets.ReadOnlyModelViewSet):
@@ -22,15 +22,12 @@ class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
 
-class SubscriptionViewSet(viewsets.ModelViewSet):
+class SubscriptionViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = SubscriptionSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Subscription.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
 
     @action(detail=False, methods=['get'])
     def current(self, request):
@@ -71,9 +68,15 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             'api_calls': {'used': searches_this_period * 4, 'limit': 10000},
         })
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='create-checkout')
     def create_checkout(self, request):
         """Create a Stripe Checkout Session for a plan."""
+        if not settings.STRIPE_SECRET_KEY:
+            return Response(
+                {'error': 'Stripe is not configured'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
         plan_id = request.data.get('plan_id')
         if not plan_id:
             return Response({'error': 'plan_id is required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -99,7 +102,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             customer.save()
 
         # Determine success/cancel URLs
-        base_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        base_url = settings.FRONTEND_URL
         success_url = request.data.get('success_url', f'{base_url}/billing?session_id={{CHECKOUT_SESSION_ID}}')
         cancel_url = request.data.get('cancel_url', f'{base_url}/billing')
 
@@ -128,7 +131,7 @@ def stripe_webhook(request):
     """Handle Stripe webhook events."""
     payload = request.body
     sig_header = request.headers.get('STRIPE_SIGNATURE', '')
-    webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+    webhook_secret = settings.STRIPE_WEBHOOK_SECRET
 
     if not webhook_secret:
         logger.warning('Stripe webhook secret not configured')

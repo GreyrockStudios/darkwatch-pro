@@ -23,6 +23,7 @@ export default function TeamPage() {
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<MemberDisplay[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showAddMember, setShowAddMember] = useState(false);
   const [showRoleManagement, setShowRoleManagement] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -30,45 +31,37 @@ export default function TeamPage() {
   const [inviting, setInviting] = useState(false);
 
   const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const teamsData = await teamsApi.list();
       const teamsList = Array.isArray(teamsData) ? teamsData : (teamsData as { results?: Team[] })?.results || [];
       if (teamsList.length > 0) {
         const firstTeam = teamsList[0];
         setTeam(firstTeam);
-        try {
-          const membersData = await teamsApi.members(String(firstTeam.id));
-          const membersList = Array.isArray(membersData) ? membersData : [];
-          setMembers(membersList.map((m: TeamMember) => ({
-            id: String(m.id),
-            name: m.name || m.email || 'Unknown',
-            email: m.email || '',
-            role: m.role?.charAt(0).toUpperCase() + m.role?.slice(1) || 'Viewer',
-            roleType: m.role || 'viewer',
-            status: m.status || 'active',
-            joinedAt: m.joined_at || '',
-          })));
-        } catch {
-          // Use fallback members
-          setMembers([
-            { id: '1', name: user?.first_name ? `${user.first_name} ${user.last_name}` : user?.email || 'You', email: user?.email || '', role: 'Owner', roleType: 'owner', status: 'active', joinedAt: '' },
-            { id: '2', name: 'Jane Security', email: 'jane@darkwatchpro.com', role: 'Admin', roleType: 'admin', status: 'active', joinedAt: '' },
-            { id: '3', name: 'Bob Analyst', email: 'bob@darkwatchpro.com', role: 'Analyst', roleType: 'analyst', status: 'active', joinedAt: '' },
-          ]);
-        }
+        const membersData = await teamsApi.members(String(firstTeam.id));
+        const membersList = Array.isArray(membersData) ? membersData : [];
+        setMembers(membersList.map((m: TeamMember) => ({
+          id: String(m.id),
+          name: m.name || m.email || 'Unknown',
+          email: m.email || '',
+          role: m.role?.charAt(0).toUpperCase() + m.role?.slice(1) || 'Viewer',
+          roleType: m.role || 'viewer',
+          status: m.status || 'active',
+          joinedAt: m.joined_at || '',
+        })));
+      } else {
+        setTeam(null);
+        setMembers([]);
       }
-    } catch {
-      // Use fallback data
-      setTeam({ id: '1', name: 'Security Team', owner: user?.id || '1', created_at: '' });
-      setMembers([
-        { id: '1', name: user?.first_name ? `${user.first_name} ${user.last_name}` : user?.email || 'You', email: user?.email || '', role: 'Owner', roleType: 'owner', status: 'active', joinedAt: '' },
-        { id: '2', name: 'Jane Security', email: 'jane@darkwatchpro.com', role: 'Admin', roleType: 'admin', status: 'active', joinedAt: '' },
-        { id: '3', name: 'Bob Analyst', email: 'bob@darkwatchpro.com', role: 'Analyst', roleType: 'analyst', status: 'active', joinedAt: '' },
-      ]);
+    } catch (err) {
+      setTeam(null);
+      setMembers([]);
+      setLoadError(err instanceof Error ? err.message : 'Failed to load team');
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -127,11 +120,22 @@ export default function TeamPage() {
           <h3 className="card-title">{team?.name || 'Team Members'}</h3>
           <div style={{ display: 'flex', gap: '1rem' }}>
             <button className="btn btn-outline btn-sm" onClick={() => setShowRoleManagement(true)}><i className="fas fa-user-shield"></i> Manage Roles</button>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowAddMember(true)}><i className="fas fa-plus"></i> Add Member</button>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowAddMember(true)} disabled={!team || !!loadError}><i className="fas fa-plus"></i> Add Member</button>
           </div>
         </div>
         <div className="team-grid">
-          {members.map((member) => (
+          {loadError ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+              <i className="fas fa-exclamation-triangle" style={{ fontSize: '2rem', marginBottom: '1rem', display: 'block', color: 'var(--danger)' }}></i>
+              <p style={{ marginBottom: '1rem' }}>{loadError}</p>
+              <button className="btn btn-outline btn-sm" onClick={loadData}>Retry</button>
+            </div>
+          ) : members.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+              <i className="fas fa-users" style={{ fontSize: '2rem', marginBottom: '1rem', display: 'block' }}></i>
+              <p>{team ? 'No team members found.' : 'No team found.'}</p>
+            </div>
+          ) : members.map((member) => (
             <div key={member.id} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

@@ -1,27 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/useAppStore';
-import { monitorsApi, alertsApi } from '../services/api';
+import { monitorsApi, alertsApi, billingApi } from '../services/api';
 
 export default function DashboardPage() {
   const user = useAppStore((s) => s.user);
   const credits = user?.credits ?? 0;
   const navigate = useNavigate();
 
-  const [stats, setStats] = useState({ monitors: 0, alerts: 0, searches: 0, score: 89 });
+  const [stats, setStats] = useState<{ monitors: number; alerts: number; searches: number; score: number | null }>({ monitors: 0, alerts: 0, searches: 0, score: null });
   const [activities, setActivities] = useState<Array<{ icon: string; iconBg: string; iconColor: string; title: string; desc: string; time: string }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const [monitorsRes, alertsRes] = await Promise.allSettled([
+        const [monitorsRes, alertsRes, usageRes] = await Promise.allSettled([
           monitorsApi.list(),
           alertsApi.list(),
+          billingApi.usage(),
         ]);
 
         const monitors = monitorsRes.status === 'fulfilled' ? monitorsRes.value : [];
         const alerts = alertsRes.status === 'fulfilled' ? alertsRes.value : [];
+        const searches = usageRes.status === 'fulfilled' ? usageRes.value.email_searches.used : 0;
 
         const activeMonitors = monitors.filter((m: { status?: string }) => m.status === 'active').length;
         const newAlerts = alerts.filter((a: { status?: string }) => a.status === 'new' || a.status === 'investigating').length;
@@ -29,8 +31,8 @@ export default function DashboardPage() {
         setStats({
           monitors: activeMonitors,
           alerts: newAlerts,
-          searches: 0,
-          score: 89,
+          searches,
+          score: null,
         });
 
         // Build activity list from real data
@@ -98,7 +100,7 @@ export default function DashboardPage() {
         <div className="stat-card"><div className="stat-number">{stats.monitors}</div><div className="stat-label">Active Monitors</div></div>
         <div className="stat-card"><div className="stat-number">{stats.alerts}</div><div className="stat-label">Breach Alerts</div></div>
         <div className="stat-card"><div className="stat-number">{stats.searches}</div><div className="stat-label">Searches This Month</div></div>
-        <div className="stat-card"><div className="stat-number">{stats.score}%</div><div className="stat-label">Security Score</div></div>
+        <div className="stat-card"><div className="stat-number">{stats.score === null ? '—' : `${stats.score}%`}</div><div className="stat-label">Security Score</div></div>
       </div>
 
       <div className="dashboard-grid">
@@ -108,11 +110,6 @@ export default function DashboardPage() {
             <input type="text" className="search-input" placeholder="Search emails, domains, usernames, passwords..." value={quickSearch} onChange={(e) => setQuickSearch(e.target.value)} />
             <button type="submit" className="btn btn-primary">Search</button>
           </form>
-          <div className="search-options" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
-            <div className="option-group"><input type="checkbox" id="regex" /><label htmlFor="regex">Regex</label></div>
-            <div className="option-group"><input type="checkbox" id="wildcard" /><label htmlFor="wildcard">Wildcard</label></div>
-            <div className="option-group"><input type="checkbox" id="dedupe" defaultChecked /><label htmlFor="dedupe">Deduplicate</label></div>
-          </div>
         </div>
 
         <div className="card">

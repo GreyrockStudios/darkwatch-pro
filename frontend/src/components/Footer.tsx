@@ -4,8 +4,8 @@ export function Footer() {
       <div className="container">
         <p>
           &copy; {new Date().getFullYear()} DarkWatch Pro. All rights reserved. |{' '}
-          <a href="#privacy">Privacy Policy</a> |{' '}
-          <a href="#terms">Terms of Service</a>
+          <span style={{ color: 'var(--text-secondary)' }}>Privacy Policy unavailable</span> |{' '}
+          <span style={{ color: 'var(--text-secondary)' }}>Terms unavailable</span>
         </p>
       </div>
     </footer>

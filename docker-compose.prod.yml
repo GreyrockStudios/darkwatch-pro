@@ -15,17 +15,17 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: base
+      target: production
     image: darkwatch-backend:latest
     ports:
       - "8000:8000"
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.dev
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-darkwatch-prod-secret-key-change-me}
-      - DJANGO_DEBUG=${DJANGO_DEBUG:-True}
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
       - POSTGRES_DB=${POSTGRES_DB:-darkwatch}
       - POSTGRES_USER=${POSTGRES_USER:-darkwatch}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-darkwatch-secure-password-2025}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - DB_HOST=postgres
       - DB_PORT=5432
       - CELERY_BROKER_URL=redis://redis:6379/0
@@ -33,7 +33,8 @@ services:
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
-      - FRONTEND_URL=http://darkwatch.greyrockstudios.com
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - FRONTEND_URL=${FRONTEND_URL}
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,26 +44,28 @@ services:
     command: >
       sh -c "python manage.py migrate &&
               python manage.py seed_plans &&
-              python manage.py seed_demo_data &&
               gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120"
 
   celery-worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: base
+      target: production
     image: darkwatch-backend:latest
     command: celery -A config worker -l info
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.dev
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-darkwatch-prod-secret-key-change-me}
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
       - POSTGRES_DB=${POSTGRES_DB:-darkwatch}
       - POSTGRES_USER=${POSTGRES_USER:-darkwatch}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-darkwatch-secure-password-2025}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - DB_HOST=postgres
       - DB_PORT=5432
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - FRONTEND_URL=${FRONTEND_URL}
     depends_on:
       - backend
       - redis
@@ -72,19 +75,22 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: base
+      target: production
     image: darkwatch-backend:latest
     command: celery -A config beat -l info
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.dev
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-darkwatch-prod-secret-key-change-me}
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
       - POSTGRES_DB=${POSTGRES_DB:-darkwatch}
       - POSTGRES_USER=${POSTGRES_USER:-darkwatch}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-darkwatch-secure-password-2025}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - DB_HOST=postgres
       - DB_PORT=5432
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - FRONTEND_URL=${FRONTEND_URL}
     depends_on:
       - backend
       - redis
@@ -95,11 +101,11 @@ services:
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-darkwatch}
       - POSTGRES_USER=${POSTGRES_USER:-darkwatch}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-darkwatch-secure-password-2025}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U darkwatch"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5

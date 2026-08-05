@@ -10,36 +10,26 @@ export default function AlertsPage() {
   const credits = user?.credits ?? 500;
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
 
   const loadAlerts = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const data = await alertsApi.list();
-      if (Array.isArray(data) && data.length > 0) {
-        setAlerts(data.map((a: Alert) => ({
+      const list = Array.isArray(data) ? data : [];
+      setAlerts(list.map((a: Alert) => ({
           ...a,
           monitorName: a.monitor_name || (typeof a.monitor === 'object' && a.monitor ? a.monitor.name : 'Unknown Monitor') || 'Unknown Monitor',
           monitorType: typeof a.monitor === 'object' && a.monitor ? (a.monitor as { monitor_type?: string }).monitor_type || 'General' : 'General',
           monitorId: typeof a.monitor === 'object' && a.monitor ? String((a.monitor as { id?: string | number }).id || '') : String(a.monitor || ''),
-        })));
-      } else {
-        // Fallback demo data
-        setAlerts([
-          { id: '1', title: 'Credential Breach Detected', description: 'admin@company.com credentials found in new data breach exposing 2M records.', severity: 'critical', status: 'new', source: 'dehashed', monitor: '1', monitor_name: 'Company Email Monitor', created_at: new Date().toISOString(), resolved_at: null },
-          { id: '2', title: 'Domain Listed in Darknet', description: 'company.com found in darknet marketplace listing for $500.', severity: 'high', status: 'acknowledged', source: 'internal', monitor: '2', monitor_name: 'Domain Monitor', created_at: new Date(Date.now() - 3600000).toISOString(), resolved_at: null },
-          { id: '3', title: 'Email Appeared in Paste', description: 'it@company.com found in a public paste site with leaked credentials.', severity: 'medium', status: 'investigating', source: 'hibp', monitor: '3', monitor_name: 'CEO Username', created_at: new Date(Date.now() - 7200000).toISOString(), resolved_at: null },
-          { id: '4', title: 'API Key Compromise', description: 'Internal API key found in public GitHub repository.', severity: 'medium', status: 'acknowledged', source: 'dehashed', monitor: '4', monitor_name: 'IT Admin Email', created_at: new Date(Date.now() - 86400000).toISOString(), resolved_at: null },
-          { id: '5', title: 'Spam List Inclusion', description: 'Company email domain found in spam marketing list.', severity: 'low', status: 'resolved', source: 'hibp', monitor: '2', monitor_name: 'Domain Monitor', created_at: new Date(Date.now() - 172800000).toISOString(), resolved_at: null },
-        ] as Alert[]);
-      }
-    } catch {
-      setAlerts([
-        { id: '1', title: 'Credential Breach Detected', description: 'admin@company.com credentials found in new data breach.', severity: 'critical', status: 'new', source: 'dehashed', monitor: '1', monitor_name: 'Company Email Monitor', created_at: new Date().toISOString(), resolved_at: null },
-        { id: '2', title: 'Domain Listed in Darknet', description: 'company.com found in darknet marketplace.', severity: 'high', status: 'acknowledged', source: 'internal', monitor: '2', monitor_name: 'Domain Monitor', created_at: new Date(Date.now() - 3600000).toISOString(), resolved_at: null },
-        { id: '3', title: 'Email Appeared in Paste', description: 'it@company.com found in paste site.', severity: 'medium', status: 'investigating', source: 'hibp', monitor: '3', monitor_name: 'CEO Username', created_at: new Date(Date.now() - 7200000).toISOString(), resolved_at: null },
-      ] as Alert[]);
+      })));
+    } catch (err) {
+      setAlerts([]);
+      setLoadError(err instanceof Error ? err.message : 'Failed to load alerts');
     } finally {
       setLoading(false);
     }
@@ -69,13 +59,17 @@ export default function AlertsPage() {
   };
 
   const updateStatus = async (id: string | number, status: string) => {
-    setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, status: status as Alert['status'] } : a)));
     try {
       if (status === 'acknowledged') await alertsApi.acknowledge(String(id));
       else if (status === 'resolved') await alertsApi.resolve(String(id));
+      else {
+        addToast('error', 'Investigating alerts is not available from this view');
+        return;
+      }
+      setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, status: status as Alert['status'] } : a)));
       addToast('success', `Alert marked as ${status}`);
-    } catch {
-      addToast('warning', 'Status updated locally (sync pending)');
+    } catch (err) {
+      addToast('error', err instanceof Error ? err.message : `Failed to mark alert as ${status}`);
     }
   };
 
@@ -140,13 +134,19 @@ export default function AlertsPage() {
 
         {/* Alert Cards */}
         <div>
-          {filteredAlerts.length === 0 && (
+          {loadError ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+              <i className="fas fa-exclamation-triangle" style={{ fontSize: '2rem', marginBottom: '1rem', display: 'block', color: 'var(--danger)' }}></i>
+              <p style={{ marginBottom: '1rem' }}>{loadError}</p>
+              <button className="btn btn-outline btn-sm" onClick={loadAlerts}>Retry</button>
+            </div>
+          ) : filteredAlerts.length === 0 && (
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
               <i className="fas fa-bell-slash" style={{ fontSize: '2rem', marginBottom: '1rem', display: 'block' }}></i>
-              No alerts matching your filters.
+              {alerts.length === 0 ? 'No alerts yet.' : 'No alerts matching your filters.'}
             </div>
           )}
-          {filteredAlerts.map((alert) => (
+          {!loadError && filteredAlerts.map((alert) => (
             <div key={alert.id} style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem', border: '1px solid var(--border-color)', borderRadius: '12px', marginBottom: '1rem', background: 'var(--bg-secondary)', transition: 'all 0.3s', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                 <div>

@@ -42,11 +42,6 @@ const faqData: Record<string, FAQItem[]> = {
   ],
 };
 
-const fallbackTickets: Ticket[] = [
-  { id: 'TKT-2024-089', subject: 'Cannot access API endpoints', status: 'in_progress', priority: 'high', user: '', user_email: '', description: '', created_at: '2024-12-14T00:00:00Z', updated_at: '2024-12-14T00:00:00Z' },
-  { id: 'TKT-2024-088', subject: 'Question about billing cycle', status: 'resolved', priority: 'medium', user: '', user_email: '', description: '', created_at: '2024-12-12T00:00:00Z', updated_at: '2024-12-12T00:00:00Z' },
-];
-
 export default function HelpPage() {
   const addToast = useAppStore((s) => s.addToast);
   const user = useAppStore((s) => s.user);
@@ -54,15 +49,24 @@ export default function HelpPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [openFAQ, setOpenFAQ] = useState<string | null>(null);
   const [showCreateTicket, setShowCreateTicket] = useState(false);
-  const [tickets, setTickets] = useState<Ticket[]>(fallbackTickets);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(true);
+  const [ticketsError, setTicketsError] = useState<string | null>(null);
   const [ticketForm, setTicketForm] = useState({ subject: '', description: '', priority: 'medium' });
   const [submitting, setSubmitting] = useState(false);
 
   const loadTickets = useCallback(async () => {
+    setTicketsLoading(true);
+    setTicketsError(null);
     try {
       const data = await supportApi.listTickets();
-      if (Array.isArray(data) && data.length > 0) setTickets(data);
-    } catch { /* use fallback */ }
+      setTickets(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setTickets([]);
+      setTicketsError(err instanceof Error ? err.message : 'Failed to load support tickets');
+    } finally {
+      setTicketsLoading(false);
+    }
   }, []);
 
   useEffect(() => { loadTickets(); }, [loadTickets]);
@@ -157,11 +161,23 @@ export default function HelpPage() {
         <div className="card-header">
           <h3 className="card-title">Support Tickets</h3>
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <button className="btn btn-outline btn-sm"><i className="fas fa-sync-alt"></i> Refresh</button>
+            <button className="btn btn-outline btn-sm" onClick={loadTickets} disabled={ticketsLoading}><i className="fas fa-sync-alt"></i> Refresh</button>
             <button className="btn btn-primary btn-sm" onClick={() => setShowCreateTicket(true)}><i className="fas fa-plus"></i> Create Ticket</button>
           </div>
         </div>
-        {tickets.length > 0 ? (
+        {ticketsLoading ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+            <div className="spinner"></div>
+            <p>Loading support tickets...</p>
+          </div>
+        ) : ticketsError ? (
+          <div className="empty-state" style={{ textAlign: 'center', padding: '2rem' }}>
+            <i className="fas fa-exclamation-triangle" style={{ fontSize: '2rem', color: 'var(--danger)', marginBottom: '1rem', display: 'block' }}></i>
+            <h4>Unable to load support tickets</h4>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>{ticketsError}</p>
+            <button className="btn btn-outline btn-sm" onClick={loadTickets}>Retry</button>
+          </div>
+        ) : tickets.length > 0 ? (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>

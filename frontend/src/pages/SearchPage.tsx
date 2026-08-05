@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../stores/useAppStore';
 import { searchApi } from '../services/api';
 
@@ -13,30 +14,14 @@ interface SearchHit {
   created_at: string;
 }
 
-const mockResults: Record<string, SearchHit[]> = {
-  email: [
-    { id: '1', value: 'admin@company.com', type: 'email', source: 'BreachDB-2024', severity: 'critical', data_types: ['email', 'password', 'name'], description: 'Found in major credential breach database (2M records)', created_at: '2024-12-15T10:30:00Z' },
-    { id: '2', value: 'user@company.com', type: 'email', source: 'DarkNet-Forums', severity: 'high', data_types: ['email', 'username'], description: 'Appeared in dark web forum post', created_at: '2024-12-14T08:15:00Z' },
-    { id: '3', value: 'dev@company.com', type: 'email', source: 'Paste-Sites', severity: 'medium', data_types: ['email', 'api_key'], description: 'Found in public paste site with API keys', created_at: '2024-12-13T14:22:00Z' },
-  ],
-  domain: [
-    { id: '4', value: 'company.com', type: 'domain', source: 'DNS-Monitor', severity: 'high', data_types: ['domain', 'dns_records'], description: 'Suspicious DNS changes detected', created_at: '2024-12-15T12:00:00Z' },
-    { id: '5', value: 'comp4ny.com', type: 'domain', source: 'Typosquat-DB', severity: 'critical', data_types: ['domain', 'phishing'], description: 'Known typosquat domain — active phishing kit detected', created_at: '2024-12-14T16:30:00Z' },
-  ],
-  username: [
-    { id: '6', value: 'ceo_john', type: 'username', source: 'Credential-DB', severity: 'critical', data_types: ['username', 'password', 'email'], description: 'Found in credential breach dump', created_at: '2024-12-15T09:00:00Z' },
-  ],
-  ip: [
-    { id: '7', value: '203.0.113.42', type: 'ip', source: 'Tor-Exit-Nodes', severity: 'high', data_types: ['ip', 'tor_exit_node'], description: 'IP found on Tor exit node list', created_at: '2024-12-15T11:00:00Z' },
-  ],
-};
-
 export default function SearchPage() {
+  const [searchParams] = useSearchParams();
   const user = useAppStore((s) => s.user);
   const addToast = useAppStore((s) => s.addToast);
+  const fetchUser = useAppStore((s) => s.fetchUser);
   const credits = user?.credits ?? 500;
-  const [query, setQuery] = useState('');
-  const [searchType, setSearchType] = useState('email');
+  const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [searchType, setSearchType] = useState(searchParams.get('type') || 'email');
   const [results, setResults] = useState<SearchHit[]>([]);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -51,7 +36,6 @@ export default function SearchPage() {
       const data = await searchApi.search(query, searchType);
       const apiResults = data.results || [];
       if (apiResults.length > 0) {
-        // Real results from API — map them
         setResults(apiResults.map((r: { email?: string; domain?: string; username?: string; password?: string; breachName?: string; breachDate?: string; dataTypes?: string[]; severity?: string }, i: number) => ({
           id: String(i + 1),
           value: r.email || r.domain || r.username || query,
@@ -65,20 +49,15 @@ export default function SearchPage() {
         setSearchInfo({ total: data.total || apiResults.length, balance: data.balance ?? credits - 1, took: data.took ?? 0.15 });
         addToast('info', `Search completed — ${data.total || apiResults.length} results`);
       } else {
-        // No real results — use demo data
-        const typeKey = searchType === 'phone' ? 'email' : searchType;
-        const demoResults = mockResults[typeKey] || mockResults.email;
-        setResults(demoResults);
-        setSearchInfo({ total: demoResults.length, balance: data.balance ?? credits - 1, took: data.took ?? 0.15 });
-        addToast('info', `Search completed — ${demoResults.length} demo results (no live data)`);
+        setResults([]);
+        setSearchInfo({ total: 0, balance: data.balance ?? credits - 1, took: data.took ?? 0.15 });
+        addToast('info', data.message || 'Search completed — no live results returned');
       }
-    } catch {
-      // Use mock data on error
-      const typeKey = searchType === 'phone' ? 'email' : searchType;
-      const demoResults = mockResults[typeKey] || mockResults.email;
-      setResults(demoResults);
-      setSearchInfo({ total: demoResults.length, balance: credits - 1, took: 0.15 });
-      addToast('warning', 'Using demo results (API unavailable)');
+      await fetchUser();
+    } catch (error) {
+      setResults([]);
+      setSearchInfo(null);
+      addToast('warning', error instanceof Error ? error.message : 'Search failed');
     } finally {
       setLoading(false);
     }
@@ -116,12 +95,6 @@ export default function SearchPage() {
           <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Searching...' : <><i className="fas fa-search"></i> Search</>}</button>
         </form>
 
-        <div className="search-options">
-          <div className="option-group"><input type="checkbox" id="regex" /><label htmlFor="regex">Regex</label></div>
-          <div className="option-group"><input type="checkbox" id="wildcard" /><label htmlFor="wildcard">Wildcard</label></div>
-          <div className="option-group"><input type="checkbox" id="fuzzy" /><label htmlFor="fuzzy">Fuzzy Match</label></div>
-          <div className="option-group"><input type="checkbox" id="dedupe" defaultChecked /><label htmlFor="dedupe">Deduplicate</label></div>
-        </div>
       </div>
 
       {loading && <div style={{ textAlign: 'center', padding: '2rem' }}><div className="spinner"></div><p style={{ color: 'var(--text-secondary)', marginTop: '1rem' }}>Searching breach databases...</p></div>}
@@ -162,6 +135,14 @@ export default function SearchPage() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {!loading && searched && results.length === 0 && searchInfo && (
+        <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+          <i className="fas fa-database" style={{ fontSize: '4rem', color: 'var(--text-muted)', marginBottom: '1.5rem', opacity: 0.5, display: 'block' }}></i>
+          <h3 style={{ marginBottom: '1rem' }}>No live results returned</h3>
+          <p style={{ color: 'var(--text-secondary)' }}>The search was saved and a credit was used, but no threat intelligence provider is configured in this environment.</p>
         </div>
       )}
 

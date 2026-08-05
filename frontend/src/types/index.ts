@@ -77,6 +77,8 @@ export interface SearchResponse {
   total: number;
   balance: number;
   took: number;
+  live?: boolean;
+  message?: string;
 }
 
 export interface SearchResultItem {

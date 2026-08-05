@@ -1,15 +1,29 @@
 import logging
+import os
 from celery import shared_task
-from django.utils import timezone
 
 from .models import Monitor
 
 logger = logging.getLogger(__name__)
 
 
+def threat_intel_provider_configured():
+    provider_keys = [
+        'HIBP_API_KEY',
+        'DEHASHED_API_KEY',
+        'INTELX_API_KEY',
+        'THREAT_INTEL_API_KEY',
+    ]
+    return any(os.environ.get(key) for key in provider_keys)
+
+
 @shared_task(name='monitoring.check_all_monitors')
 def check_all_monitors():
     """Iterate all active monitors and check for new breaches."""
+    if not threat_intel_provider_configured():
+        logger.warning('Threat intelligence provider not configured; no monitors queued')
+        return {'status': 'not_configured', 'queued': 0}
+
     active_monitors = Monitor.objects.filter(status='active')
     count = 0
     for monitor in active_monitors.iterator():
@@ -24,28 +38,24 @@ def check_all_monitors():
 
 @shared_task(name='monitoring.check_monitor', bind=True, max_retries=3)
 def check_monitor(self, monitor_id):
-    """Check a single monitor for new breaches (stub for threat intel API integration)."""
+    """Check a single monitor for new breaches."""
     try:
         monitor = Monitor.objects.get(id=monitor_id)
     except Monitor.DoesNotExist:
         logger.warning(f'Monitor {monitor_id} not found')
         return {'status': 'not_found'}
 
-    logger.info(f'Checking monitor: {monitor.name} ({monitor.type}: {monitor.value})')
+    if not threat_intel_provider_configured():
+        logger.warning(f'Threat intelligence provider not configured for monitor {monitor_id}')
+        return {
+            'monitor_id': str(monitor.id),
+            'status': 'not_configured',
+        }
 
-    # Stub: In production, this would call threat intelligence APIs
-    # (Dehashed, Have I Been Pwned, etc.) and create alerts for new breaches
-    monitor.last_checked = timezone.now()
-    monitor.save(update_fields=['last_checked'])
-
-    # Return mock result for now
+    logger.error(f'Threat intelligence check backend is not implemented for monitor {monitor_id}')
     return {
         'monitor_id': str(monitor.id),
-        'name': monitor.name,
-        'type': monitor.type,
-        'value': monitor.value,
-        'breaches_found': 0,
-        'status': 'checked',
+        'status': 'not_implemented',
     }
 
 

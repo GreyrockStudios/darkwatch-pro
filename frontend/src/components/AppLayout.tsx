@@ -3,7 +3,7 @@ import { Sidebar } from './Sidebar';
 import { useAppStore } from '../stores/useAppStore';
 
 export function AppLayout() {
-  const { sidebarOpen, toggleSidebar } = useAppStore();
+  const { toggleSidebar } = useAppStore();
 
   return (
     <>

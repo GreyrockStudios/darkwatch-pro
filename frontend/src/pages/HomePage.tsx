@@ -7,7 +7,7 @@ export default function HomePage() {
           <p>Protect your organization with AI-powered dark web monitoring. Detect compromised credentials, monitor threat actors, and respond to breaches in real-time with enterprise-grade security intelligence.</p>
           <div className="hero-buttons">
             <a href="/signup" className="btn btn-primary btn-lg">Start Free Trial</a>
-            <a href="#demo" className="btn btn-outline btn-lg">Watch Demo</a>
+            <a href="/contact?topic=demo" className="btn btn-outline btn-lg">Request Demo</a>
           </div>
           <div className="hero-stats">
             <div className="hero-stat"><div className="hero-stat-number">10B+</div><div className="hero-stat-label">Records Monitored</div></div>
@@ -27,37 +27,37 @@ export default function HomePage() {
               <div className="feature-icon"><i className="fas fa-shield-alt"></i></div>
               <h3>Real-Time Threat Detection</h3>
               <p>Monitor your digital assets 24/7 with AI-powered breach detection. Get instant alerts when threats are detected.</p>
-              <a href="#" className="btn btn-outline">Learn More <i className="fas fa-arrow-right"></i></a>
+              <a href="/signup" className="btn btn-outline">Get Started <i className="fas fa-arrow-right"></i></a>
             </div>
             <div className="feature-card">
               <div className="feature-icon"><i className="fas fa-search"></i></div>
               <h3>Intelligent Data Search</h3>
               <p>Search across 10+ billion compromised records with advanced AI algorithms and custom filters for precise threat hunting.</p>
-              <a href="#" className="btn btn-outline">Learn More <i className="fas fa-arrow-right"></i></a>
+              <a href="/signup" className="btn btn-outline">Get Started <i className="fas fa-arrow-right"></i></a>
             </div>
             <div className="feature-card">
               <div className="feature-icon"><i className="fas fa-globe"></i></div>
               <h3>Domain Threat Intelligence</h3>
               <p>Comprehensive domain analysis including WHOIS history, subdomain enumeration, DNS monitoring, and threat attribution.</p>
-              <a href="#" className="btn btn-outline">Learn More <i className="fas fa-arrow-right"></i></a>
+              <a href="/signup" className="btn btn-outline">Get Started <i className="fas fa-arrow-right"></i></a>
             </div>
             <div className="feature-card">
               <div className="feature-icon"><i className="fas fa-bell"></i></div>
               <h3>Smart Alert System</h3>
               <p>Intelligent notification routing with severity-based escalation, custom webhooks, and SIEM integration.</p>
-              <a href="#" className="btn btn-outline">Learn More <i className="fas fa-arrow-right"></i></a>
+              <a href="/signup" className="btn btn-outline">Get Started <i className="fas fa-arrow-right"></i></a>
             </div>
             <div className="feature-card">
               <div className="feature-icon"><i className="fas fa-users"></i></div>
               <h3>Enterprise Team Management</h3>
               <p>Role-based access control, multi-tenant architecture, and centralized billing for security teams.</p>
-              <a href="#" className="btn btn-outline">Learn More <i className="fas fa-arrow-right"></i></a>
+              <a href="/signup" className="btn btn-outline">Get Started <i className="fas fa-arrow-right"></i></a>
             </div>
             <div className="feature-card">
               <div className="feature-icon"><i className="fas fa-chart-bar"></i></div>
               <h3>Advanced Analytics & Reporting</h3>
               <p>Generate executive dashboards, compliance reports, and threat intelligence briefings with automated risk scoring.</p>
-              <a href="#" className="btn btn-outline">Learn More <i className="fas fa-arrow-right"></i></a>
+              <a href="/signup" className="btn btn-outline">Get Started <i className="fas fa-arrow-right"></i></a>
             </div>
           </div>
         </div>

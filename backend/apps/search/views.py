@@ -2,12 +2,55 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db import transaction
 from .models import SearchResult
 from .serializers import SearchResultSerializer
 
 
 class SearchView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def _run_search(self, request, query, search_type, source):
+        with transaction.atomic():
+            user = type(request.user).objects.select_for_update().get(pk=request.user.pk)
+            if user.credits < 1:
+                return Response(
+                    {'error': 'No search credits remaining', 'balance': user.credits},
+                    status=status.HTTP_402_PAYMENT_REQUIRED,
+                )
+
+            user.credits -= 1
+            user.save(update_fields=['credits'])
+            request.user.credits = user.credits
+            balance = user.credits
+
+            result = SearchResult.objects.create(
+                user=user,
+                query=query,
+                type=search_type,
+                source=source,
+                data={
+                    'query': query,
+                    'results': [],
+                    'total': 0,
+                    'balance': balance,
+                    'took': 0.15,
+                    'live': False,
+                    'message': 'No threat intelligence provider is configured for this environment.',
+                },
+            )
+
+        return Response({
+            'id': str(result.id),
+            'query': query,
+            'type': search_type,
+            'results': [],
+            'total': 0,
+            'balance': balance,
+            'took': 0.15,
+            'live': False,
+            'message': 'No threat intelligence provider is configured for this environment.',
+        })
 
     def get(self, request):
         """GET /search/?q=query — convenience alias for POST search."""
@@ -18,23 +61,7 @@ class SearchView(APIView):
         if not query:
             return Response({'error': 'Query parameter q or query is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        result = SearchResult.objects.create(
-            user=request.user,
-            query=query,
-            type=search_type,
-            source=source,
-            data={'query': query, 'results': [], 'total': 0, 'balance': request.user.credits, 'took': 0.15}
-        )
-
-        return Response({
-            'id': str(result.id),
-            'query': query,
-            'type': search_type,
-            'results': [],
-            'total': 0,
-            'balance': request.user.credits - 1,
-            'took': 0.15,
-        })
+        return self._run_search(request, query, search_type, source)
 
     def post(self, request):
         query = request.data.get('query', '')
@@ -44,33 +71,7 @@ class SearchView(APIView):
         if not query:
             return Response({'error': 'Query is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Store the search query
-        result = SearchResult.objects.create(
-            user=request.user,
-            query=query,
-            type=search_type,
-            source=source,
-            data={
-                'query': query,
-                'results': [],
-                'total': 0,
-                'balance': request.user.credits,
-                'took': 0.15,
-            }
-        )
-
-        # Return mock data structure (ready for real API integration)
-        mock_data = {
-            'id': str(result.id),
-            'query': query,
-            'type': search_type,
-            'results': [],
-            'total': 0,
-            'balance': request.user.credits - 1,
-            'took': 0.15,
-        }
-
-        return Response(mock_data)
+        return self._run_search(request, query, search_type, source)
 
 
 class SearchHistoryView(APIView):

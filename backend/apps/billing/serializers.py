@@ -26,4 +26,4 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = ['id', 'plan', 'plan_name', 'plan_price', 'plan_credits', 'status', 'current_period_start', 'current_period_end', 'cancel_at_period_end']
-        read_only_fields = ['id', 'current_period_start', 'current_period_end']
+        read_only_fields = fields

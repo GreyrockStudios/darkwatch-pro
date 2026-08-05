@@ -5,6 +5,7 @@ __pycache__/
 *.pyc
 .env
 .env.*
+!.env.example
 venv/
 .venv/
 staticfiles/
@@ -12,5 +13,6 @@ media/
 *.db
 *.sqlite3
 *.log
+*.tsbuildinfo
 .DS_Store
 frontend-dist/

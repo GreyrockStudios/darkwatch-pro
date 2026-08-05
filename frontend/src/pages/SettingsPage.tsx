@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import Modal from '../components/Modal';
 import { useAppStore } from '../stores/useAppStore';
 import { authApi } from '../services/api';
-import { LoadingSpinner } from '../components';
 
 export default function SettingsPage() {
   const user = useAppStore((s) => s.user);
@@ -20,8 +19,8 @@ export default function SettingsPage() {
   const [passwordForm, setPasswordForm] = useState({ old_password: '', new_password: '', confirm_password: '' });
   const [notifications, setNotifications] = useState({
     email_critical: true, email_high: true, email_medium: true, email_low: false,
-    sms_critical: true, sms_high: false, sms_medium: false, sms_low: false,
-    webhook_critical: true, webhook_high: true, webhook_medium: false, webhook_low: false,
+    sms_critical: false, sms_high: false, sms_medium: false, sms_low: false,
+    webhook_critical: false, webhook_high: false, webhook_medium: false, webhook_low: false,
     weekly_report: true, marketing: false,
   });
 
@@ -121,8 +120,8 @@ export default function SettingsPage() {
         <h3 className="section-title">Security Settings</h3>
         <div style={{ display: 'grid', gap: '1rem' }}>
           {[
-            { icon: 'fa-lock', title: 'Two-Factor Authentication', desc: 'Add an extra layer of security to your account', action: 'Configure', onClick: () => setShow2FA(true) },
-            { icon: 'fa-history', title: 'Session Management', desc: 'View and manage your active sessions', action: 'Manage Sessions', onClick: () => {} },
+            { icon: 'fa-lock', title: 'Two-Factor Authentication', desc: 'Requires backend authenticator enrollment before it can be enabled', action: 'Unavailable', disabled: true, onClick: () => setShow2FA(true) },
+            { icon: 'fa-history', title: 'Session Management', desc: 'Requires a session management endpoint before active sessions can be shown', action: 'Unavailable', disabled: true, onClick: () => {} },
           ].map((item) => (
             <div key={item.title} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -134,7 +133,7 @@ export default function SettingsPage() {
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>{item.desc}</p>
                 </div>
               </div>
-              <button className="btn btn-outline btn-sm" onClick={item.onClick}>{item.action}</button>
+              <button className="btn btn-outline btn-sm" onClick={item.onClick} disabled={item.disabled}>{item.action}</button>
             </div>
           ))}
         </div>
@@ -169,11 +168,11 @@ export default function SettingsPage() {
             { key: 'sms_medium' as const, label: 'Medium Priority', desc: 'SMS updates' },
             { key: 'sms_low' as const, label: 'Low Priority', desc: 'General SMS' },
           ].map((n) => (
-            <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-              <div><div style={{ fontWeight: 500 }}>{n.label}</div><div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{n.desc}</div></div>
+            <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', opacity: 0.7 }}>
+              <div><div style={{ fontWeight: 500 }}>{n.label}</div><div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{n.desc} - provider required</div></div>
               <label style={{ position: 'relative', width: '44px', height: '24px' }}>
-                <input type="checkbox" checked={notifications[n.key]} onChange={() => toggle(n.key)} style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} />
-                <span style={{ position: 'absolute', cursor: 'pointer', inset: 0, background: notifications[n.key] ? 'var(--accent-primary)' : 'var(--border-color)', borderRadius: '12px', transition: '0.3s' }}></span>
+                <input type="checkbox" checked={notifications[n.key]} disabled style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} />
+                <span style={{ position: 'absolute', cursor: 'not-allowed', inset: 0, background: notifications[n.key] ? 'var(--accent-primary)' : 'var(--border-color)', borderRadius: '12px', transition: '0.3s' }}></span>
                 <span style={{ position: 'absolute', height: '18px', width: '18px', left: notifications[n.key] ? '24px' : '3px', bottom: '3px', background: 'white', borderRadius: '50%', transition: '0.3s' }}></span>
               </label>
             </div>
@@ -186,11 +185,11 @@ export default function SettingsPage() {
               { key: 'webhook_critical' as const, label: 'Critical Webhooks' },
               { key: 'webhook_high' as const, label: 'High Priority Webhooks' },
             ].map((n) => (
-              <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '0.5rem' }}>
-                <span>{n.label}</span>
+              <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '0.5rem', opacity: 0.7 }}>
+                <span>{n.label} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>provider required</span></span>
                 <label style={{ position: 'relative', width: '44px', height: '24px' }}>
-                  <input type="checkbox" checked={notifications[n.key]} onChange={() => toggle(n.key)} style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} />
-                  <span style={{ position: 'absolute', cursor: 'pointer', inset: 0, background: notifications[n.key] ? 'var(--accent-primary)' : 'var(--border-color)', borderRadius: '12px', transition: '0.3s' }}></span>
+                  <input type="checkbox" checked={notifications[n.key]} disabled style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} />
+                  <span style={{ position: 'absolute', cursor: 'not-allowed', inset: 0, background: notifications[n.key] ? 'var(--accent-primary)' : 'var(--border-color)', borderRadius: '12px', transition: '0.3s' }}></span>
                   <span style={{ position: 'absolute', height: '18px', width: '18px', left: notifications[n.key] ? '24px' : '3px', bottom: '3px', background: 'white', borderRadius: '50%', transition: '0.3s' }}></span>
                 </label>
               </div>
@@ -213,22 +212,24 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => addToast('success', 'Notification preferences saved')}>Save Notification Preferences</button>
+        <button className="btn btn-primary" disabled title="Notification preference API is not configured">Save Notification Preferences</button>
       </div>
 
       {/* SMS & Webhook Config */}
       <div className="settings-section">
         <h3 className="section-title">SMS Configuration</h3>
-        <div className="form-group"><label>SMS Provider</label><select defaultValue="twilio"><option value="twilio">Twilio</option><option value="aws_sns">AWS SNS</option><option value="nexmo">Nexmo/Vonage</option></select></div>
-        <div className="form-group"><label>Phone Number</label><input type="tel" defaultValue="+1-555-0123" /></div>
-        <div style={{ display: 'flex', gap: '1rem' }}><button className="btn btn-primary btn-sm" onClick={() => addToast('info', 'Test SMS sent (stub)')}>Test SMS</button><button className="btn btn-outline btn-sm" onClick={() => addToast('success', 'SMS config saved')}>Save Configuration</button></div>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>SMS alerts are unavailable until an SMS provider is connected.</p>
+        <div className="form-group"><label>SMS Provider</label><select disabled defaultValue=""><option value="">Not configured</option></select></div>
+        <div className="form-group"><label>Phone Number</label><input type="tel" disabled placeholder="Unavailable until SMS provider is configured" /></div>
+        <div style={{ display: 'flex', gap: '1rem' }}><button className="btn btn-primary btn-sm" disabled>Test SMS</button><button className="btn btn-outline btn-sm" disabled>Save Configuration</button></div>
       </div>
 
       <div className="settings-section">
         <h3 className="section-title">Webhook Configuration</h3>
-        <div className="form-group"><label>Webhook URL</label><input type="url" defaultValue="https://api.company.com/webhooks/darkwatch" /></div>
-        <div className="form-group"><label>Webhook Secret</label><input type="text" defaultValue="whsec_••••••••••••••••••" /></div>
-        <div style={{ display: 'flex', gap: '1rem' }}><button className="btn btn-primary btn-sm" onClick={() => addToast('info', 'Test webhook sent (stub)')}>Test Webhook</button><button className="btn btn-outline btn-sm" onClick={() => addToast('success', 'Webhook config saved')}>Save Configuration</button></div>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Webhook delivery is unavailable until webhook storage and delivery endpoints are connected.</p>
+        <div className="form-group"><label>Webhook URL</label><input type="url" disabled placeholder="Unavailable until webhook provider is configured" /></div>
+        <div className="form-group"><label>Webhook Secret</label><input type="text" disabled placeholder="Not configured" /></div>
+        <div style={{ display: 'flex', gap: '1rem' }}><button className="btn btn-primary btn-sm" disabled>Test Webhook</button><button className="btn btn-outline btn-sm" disabled>Save Configuration</button></div>
       </div>
 
       {/* API Management */}
@@ -238,17 +239,12 @@ export default function SettingsPage() {
           <div style={{ padding: '1.5rem', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
             <h4 style={{ color: 'var(--warning)', marginBottom: '0.5rem' }}>Enterprise Feature</h4>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>API access requires an Enterprise plan. Upgrade to get full API access with dedicated endpoints.</p>
-            <div style={{ display: 'flex', gap: '1rem' }}><button className="btn btn-primary">Contact Enterprise</button><button className="btn btn-outline">Upgrade to Enterprise</button></div>
+            <div style={{ display: 'flex', gap: '1rem' }}><button className="btn btn-primary" disabled>Contact Enterprise</button><button className="btn btn-outline" disabled>Upgrade to Enterprise</button></div>
           </div>
           <div style={{ padding: '1.5rem', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
             <h4 style={{ marginBottom: '1rem' }}>API Keys</h4>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--bg-tertiary)', borderRadius: '4px', marginBottom: '0.5rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-              <span>dw_live_••••••••••••••••</span>
-              <div style={{ display: 'flex', gap: '0.5rem' }}><button className="btn btn-outline btn-sm" disabled>Regenerate</button><button className="btn btn-danger btn-sm" disabled style={{ background: 'var(--danger)', color: 'var(--bg-primary)' }}>Revoke</button></div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--bg-tertiary)', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-              <span>dw_test_••••••••••••••••</span>
-              <div style={{ display: 'flex', gap: '0.5rem' }}><button className="btn btn-outline btn-sm" disabled>Regenerate</button><button className="btn btn-danger btn-sm" disabled style={{ background: 'var(--danger)', color: 'var(--bg-primary)' }}>Revoke</button></div>
+            <div style={{ padding: '0.75rem', background: 'var(--bg-tertiary)', borderRadius: '4px', color: 'var(--text-secondary)' }}>
+              API keys are unavailable until API key management is implemented.
             </div>
           </div>
         </div>
@@ -258,11 +254,10 @@ export default function SettingsPage() {
       <Modal isOpen={show2FA} onClose={() => setShow2FA(false)} title="Configure Two-Factor Authentication" maxWidth="500px">
         <div style={{ textAlign: 'center', padding: '2rem' }}>
           <div style={{ width: '150px', height: '150px', background: 'var(--bg-tertiary)', margin: '0 auto 1.5rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: 'var(--accent-primary)' }}>
-            <i className="fas fa-qrcode"></i>
+            <i className="fas fa-lock"></i>
           </div>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
-          <div className="form-group"><label>Verification Code</label><input type="text" placeholder="Enter 6-digit code" style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem' }} /></div>
-          <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => { setShow2FA(false); addToast('info', '2FA enable is not yet implemented'); }}>Enable 2FA</button>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>Two-factor authentication is unavailable until authenticator enrollment is implemented on the backend.</p>
+          <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setShow2FA(false)}>Close</button>
         </div>
       </Modal>
     </>

@@ -1,8 +1,19 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.conf import settings
+from django.core.mail import send_mail
 from .models import Team, TeamMember
 from .serializers import TeamSerializer, TeamMemberSerializer
+
+
+def email_provider_configured():
+    backend = getattr(settings, 'EMAIL_BACKEND', '')
+    host = getattr(settings, 'EMAIL_HOST', '')
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '')
+    if backend.endswith('.locmem.EmailBackend') or backend.endswith('.console.EmailBackend'):
+        return False
+    return bool(host and host != 'localhost' and from_email)
 
 
 class IsTeamOwnerOrAdmin(permissions.BasePermission):
@@ -48,7 +59,30 @@ class TeamViewSet(viewsets.ModelViewSet):
         team = self.get_object()
         email = request.data.get('email')
         role = request.data.get('role', 'viewer')
-        # In production, this would send an invitation email
+
+        if not email:
+            return Response({'error': 'email is required'}, status=status.HTTP_400_BAD_REQUEST)
+        if role not in dict(TeamMember.ROLE_CHOICES):
+            return Response({'error': 'Invalid role'}, status=status.HTTP_400_BAD_REQUEST)
+        if not email_provider_configured():
+            return Response(
+                {'error': 'Email provider is not configured', 'detail': 'Invitation email was not sent.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        sent = send_mail(
+            subject=f'Invitation to join {team.name}',
+            message=f'{request.user.email} invited you to join {team.name} as {role}.',
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        if sent != 1:
+            return Response(
+                {'error': 'Invitation email was not sent'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
         return Response({'message': f'Invitation sent to {email}', 'team': team.name, 'role': role})
 
 

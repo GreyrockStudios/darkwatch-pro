@@ -5,10 +5,6 @@ import Modal from '../components/Modal';
 import { PageSkeleton } from '../components';
 import type { Report } from '../types';
 
-const fallbackReports: Report[] = [
-  { id: '1', type: 'breach', title: 'Monthly Breach Summary', data: { summary: 'No breaches detected this period.' }, status: 'ready', created_at: new Date().toISOString() },
-];
-
 const reportTypes = [
   { type: 'breach', icon: 'fa-shield-alt', title: 'Breach Analysis', desc: 'Comprehensive analysis of detected breaches with risk assessment.' },
   { type: 'executive', icon: 'fa-file-alt', title: 'Executive Report', desc: 'High-level summary for leadership and stakeholders.' },
@@ -31,18 +27,21 @@ export default function ReportsPage() {
 
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showGenerate, setShowGenerate] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genForm, setGenForm] = useState({ type: 'breach', title: '' });
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
   const loadReports = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const data = await reportsApi.list();
       const list = Array.isArray(data) ? data : (data as { results?: Report[] })?.results || [];
-      setReports(list.length > 0 ? list : fallbackReports);
-    } catch {
-      setReports(fallbackReports);
+      setReports(list);
+    } catch (err) {
+      setReports([]);
+      setLoadError(err instanceof Error ? err.message : 'Failed to load reports');
     } finally {
       setLoading(false);
     }
@@ -92,7 +91,7 @@ export default function ReportsPage() {
       addToast('info', 'Regenerating report...');
       setTimeout(() => loadReports(), 3000);
     } catch (err) {
-      addToast('error', 'Failed to regenerate report');
+      addToast('error', err instanceof Error ? err.message : 'Failed to regenerate report');
     }
   };
 
@@ -136,8 +135,15 @@ export default function ReportsPage() {
       <div className="card">
         <div className="card-header">
           <h3 className="card-title">Report History</h3>
+          <button className="btn btn-outline btn-sm" onClick={loadReports}><i className="fas fa-sync-alt"></i> Refresh</button>
         </div>
-        {reports.length === 0 ? (
+        {loadError ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+            <i className="fas fa-exclamation-triangle" style={{ fontSize: '2rem', color: 'var(--danger)', marginBottom: '1rem', display: 'block' }}></i>
+            <p style={{ marginBottom: '1rem' }}>{loadError}</p>
+            <button className="btn btn-outline btn-sm" onClick={loadReports}>Retry</button>
+          </div>
+        ) : reports.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
             <i className="fas fa-file-alt" style={{ fontSize: '3rem', color: 'var(--text-muted)', marginBottom: '1rem', display: 'block' }}></i>
             <p style={{ color: 'var(--text-secondary)' }}>No reports yet. Generate your first report above.</p>
