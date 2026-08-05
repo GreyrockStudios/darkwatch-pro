@@ -125,7 +125,7 @@ export default function BillingPage() {
       <div className="card">
         <div className="card-header">
           <h3 className="card-title">Payment Methods</h3>
-          <button className="btn btn-primary" disabled title="Payment provider integration is not configured"><i className="fas fa-plus"></i> Add Payment Method</button>
+          <button className="btn btn-primary" disabled title="Payment provider integration is not configured"><i className="fas fa-lock"></i> Provider Required</button>
         </div>
         <div style={{ padding: '1.5rem', border: '1px solid var(--border-color)', borderRadius: '12px', background: 'var(--bg-primary)' }}>
           <h4 style={{ marginBottom: '0.5rem' }}>Payment provider not configured</h4>
