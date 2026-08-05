@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.http import HttpResponse
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -9,7 +10,7 @@ from .tasks import generate_report
 
 
 def report_generation_configured():
-    return bool(getattr(settings, 'REPORT_GENERATION_ENABLED', False))
+    return bool(getattr(settings, 'REPORT_GENERATION_ENABLED', False) or getattr(settings, 'LOCAL_REPORT_GENERATION_ENABLED', True))
 
 
 class ReportViewSet(viewsets.ModelViewSet):
@@ -37,6 +38,11 @@ class ReportViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
+        if getattr(settings, 'LOCAL_REPORT_GENERATION_ENABLED', True):
+            generate_report(str(report.id))
+            report.refresh_from_db()
+            return Response(ReportSerializer(report).data)
+
         generate_report.delay(str(report.id))
         return Response({'status': 'generating'}, status=status.HTTP_202_ACCEPTED)
 
@@ -45,9 +51,13 @@ class ReportViewSet(viewsets.ModelViewSet):
         report = self.get_object()
         if report.status != 'ready':
             return Response({'error': 'Report not ready'}, status=status.HTTP_400_BAD_REQUEST)
-        if not report_generation_configured():
+        if not report.artifact_content:
             return Response(
-                {'error': 'Report downloads are not configured'},
+                {'error': 'Report artifact is missing'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        return Response({'error': 'Report download backend is not implemented'}, status=status.HTTP_501_NOT_IMPLEMENTED)
+        filename = f'darkwatch-report-{report.id}.{report.artifact_format or "html"}'
+        content_type = 'text/html' if report.artifact_format == 'html' else 'application/octet-stream'
+        response = HttpResponse(report.artifact_content, content_type=content_type)
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response

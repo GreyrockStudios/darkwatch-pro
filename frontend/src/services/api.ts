@@ -160,6 +160,8 @@ export const authApi = {
   updateMe: (data: Partial<User>) => api.patch<User>('/accounts/me/update/', data),
   changePassword: (old_password: string, new_password: string) =>
     api.post<{ detail: string }>('/accounts/change-password/', { old_password, new_password }),
+  securityScore: () =>
+    api.get<{ score: number; grade: string; provider_required: boolean; message: string; reasons: string[] }>('/accounts/security-score/'),
 };
 
 // Monitors API

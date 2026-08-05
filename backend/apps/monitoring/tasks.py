@@ -1,6 +1,7 @@
 import logging
 import os
 from celery import shared_task
+from django.utils import timezone
 
 from .models import Monitor
 
@@ -22,7 +23,13 @@ def check_all_monitors():
     """Iterate all active monitors and check for new breaches."""
     if not threat_intel_provider_configured():
         logger.warning('Threat intelligence provider not configured; no monitors queued')
-        return {'status': 'not_configured', 'queued': 0}
+        now = timezone.now()
+        updated = Monitor.objects.filter(status='active').update(
+            last_checked=now,
+            last_check_status='provider_required',
+            last_check_message='No threat intelligence provider is configured for monitor checks.',
+        )
+        return {'status': 'provider_required', 'queued': 0, 'updated': updated}
 
     active_monitors = Monitor.objects.filter(status='active')
     count = 0
@@ -47,15 +54,23 @@ def check_monitor(self, monitor_id):
 
     if not threat_intel_provider_configured():
         logger.warning(f'Threat intelligence provider not configured for monitor {monitor_id}')
+        monitor.last_checked = timezone.now()
+        monitor.last_check_status = 'provider_required'
+        monitor.last_check_message = 'No threat intelligence provider is configured for monitor checks.'
+        monitor.save(update_fields=['last_checked', 'last_check_status', 'last_check_message'])
         return {
             'monitor_id': str(monitor.id),
-            'status': 'not_configured',
+            'status': 'provider_required',
         }
 
     logger.error(f'Threat intelligence check backend is not implemented for monitor {monitor_id}')
+    monitor.last_checked = timezone.now()
+    monitor.last_check_status = 'provider_required'
+    monitor.last_check_message = 'Threat intelligence provider adapters are configured but no live monitor implementation is enabled.'
+    monitor.save(update_fields=['last_checked', 'last_check_status', 'last_check_message'])
     return {
         'monitor_id': str(monitor.id),
-        'status': 'not_implemented',
+        'status': 'provider_required',
     }
 
 

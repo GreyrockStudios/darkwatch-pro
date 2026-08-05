@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/useAppStore';
-import { monitorsApi, alertsApi, billingApi } from '../services/api';
+import { monitorsApi, alertsApi, billingApi, authApi } from '../services/api';
 
 export default function DashboardPage() {
   const user = useAppStore((s) => s.user);
@@ -15,15 +15,17 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const [monitorsRes, alertsRes, usageRes] = await Promise.allSettled([
+        const [monitorsRes, alertsRes, usageRes, scoreRes] = await Promise.allSettled([
           monitorsApi.list(),
           alertsApi.list(),
           billingApi.usage(),
+          authApi.securityScore(),
         ]);
 
         const monitors = monitorsRes.status === 'fulfilled' ? monitorsRes.value : [];
         const alerts = alertsRes.status === 'fulfilled' ? alertsRes.value : [];
         const searches = usageRes.status === 'fulfilled' ? usageRes.value.email_searches.used : 0;
+        const score = scoreRes.status === 'fulfilled' ? scoreRes.value.score : null;
 
         const activeMonitors = monitors.filter((m: { status?: string }) => m.status === 'active').length;
         const newAlerts = alerts.filter((a: { status?: string }) => a.status === 'new' || a.status === 'investigating').length;
@@ -32,7 +34,7 @@ export default function DashboardPage() {
           monitors: activeMonitors,
           alerts: newAlerts,
           searches,
-          score: null,
+          score,
         });
 
         // Build activity list from real data

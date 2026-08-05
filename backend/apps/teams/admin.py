@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Team, TeamMember
+from .models import Team, TeamInvite, TeamMember
 
 
 class TeamMemberInline(admin.TabularInline):
@@ -19,3 +19,11 @@ class TeamMemberAdmin(admin.ModelAdmin):
     list_display = ['team', 'user', 'role', 'status', 'joined_at']
     list_filter = ['role', 'status']
     search_fields = ['team__name', 'user__email']
+
+
+@admin.register(TeamInvite)
+class TeamInviteAdmin(admin.ModelAdmin):
+    list_display = ['team', 'email', 'role', 'status', 'expires_at', 'sent_at', 'accepted_at']
+    list_filter = ['role', 'status']
+    search_fields = ['team__name', 'email', 'invited_by__email', 'accepted_by__email']
+    readonly_fields = ['token_hash', 'created_at', 'updated_at']

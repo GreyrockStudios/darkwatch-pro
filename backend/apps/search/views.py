@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db import transaction
 from .models import SearchResult
+from .providers import get_provider
 from .serializers import SearchResultSerializer
 
 
@@ -11,6 +12,7 @@ class SearchView(APIView):
     permission_classes = [IsAuthenticated]
 
     def _run_search(self, request, query, search_type, source):
+        provider_result = get_provider(source).search(query, search_type)
         with transaction.atomic():
             user = type(request.user).objects.select_for_update().get(pk=request.user.pk)
             if user.credits < 1:
@@ -28,15 +30,16 @@ class SearchView(APIView):
                 user=user,
                 query=query,
                 type=search_type,
-                source=source,
+                source=provider_result.source,
                 data={
                     'query': query,
-                    'results': [],
-                    'total': 0,
+                    'results': provider_result.results,
+                    'total': provider_result.total,
                     'balance': balance,
-                    'took': 0.15,
-                    'live': False,
-                    'message': 'No threat intelligence provider is configured for this environment.',
+                    'took': provider_result.took,
+                    'live': provider_result.live,
+                    'provider_required': provider_result.provider_required,
+                    'message': provider_result.message,
                 },
             )
 
@@ -44,12 +47,13 @@ class SearchView(APIView):
             'id': str(result.id),
             'query': query,
             'type': search_type,
-            'results': [],
-            'total': 0,
+            'results': provider_result.results,
+            'total': provider_result.total,
             'balance': balance,
-            'took': 0.15,
-            'live': False,
-            'message': 'No threat intelligence provider is configured for this environment.',
+            'took': provider_result.took,
+            'live': provider_result.live,
+            'provider_required': provider_result.provider_required,
+            'message': provider_result.message,
         })
 
     def get(self, request):

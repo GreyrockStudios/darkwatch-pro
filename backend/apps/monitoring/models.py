@@ -27,6 +27,8 @@ class Monitor(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     created_at = models.DateTimeField(auto_now_add=True)
     last_checked = models.DateTimeField(null=True, blank=True)
+    last_check_status = models.CharField(max_length=50, blank=True)
+    last_check_message = models.TextField(blank=True)
     breach_count = models.PositiveIntegerField(default=0)
 
     class Meta:

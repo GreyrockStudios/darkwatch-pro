@@ -1,19 +1,22 @@
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.utils import timezone
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.conf import settings
-from django.core.mail import send_mail
-from .models import Team, TeamMember
-from .serializers import TeamSerializer, TeamMemberSerializer
 
-
-def email_provider_configured():
-    backend = getattr(settings, 'EMAIL_BACKEND', '')
-    host = getattr(settings, 'EMAIL_HOST', '')
-    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '')
-    if backend.endswith('.locmem.EmailBackend') or backend.endswith('.console.EmailBackend'):
-        return False
-    return bool(host and host != 'localhost' and from_email)
+from .email import can_expose_invite_token, send_team_invite_email
+from .models import Team, TeamInvite, TeamMember
+from .serializers import (
+    TeamInviteAcceptSerializer,
+    TeamInviteCreateSerializer,
+    TeamInvitePublicSerializer,
+    TeamInviteSerializer,
+    TeamMemberSerializer,
+    TeamSerializer,
+)
+from .services import accept_invite_for_user
 
 
 class IsTeamOwnerOrAdmin(permissions.BasePermission):
@@ -34,6 +37,12 @@ class TeamViewSet(viewsets.ModelViewSet):
         team = serializer.save(owner=self.request.user)
         TeamMember.objects.create(team=team, user=self.request.user, role='owner')
 
+    def _can_manage_team(self, team):
+        return (
+            team.owner == self.request.user
+            or team.members.filter(user=self.request.user, role__in=['owner', 'admin'], status='active').exists()
+        )
+
     @action(detail=True, methods=['get', 'post'])
     def members(self, request, pk=None):
         team = self.get_object()
@@ -44,7 +53,6 @@ class TeamViewSet(viewsets.ModelViewSet):
         elif request.method == 'POST':
             email = request.data.get('email')
             role = request.data.get('role', 'viewer')
-            from django.contrib.auth import get_user_model
             User = get_user_model()
             try:
                 user = User.objects.get(email=email)
@@ -57,33 +65,90 @@ class TeamViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def invite(self, request, pk=None):
         team = self.get_object()
-        email = request.data.get('email')
-        role = request.data.get('role', 'viewer')
+        if not self._can_manage_team(team):
+            return Response({'detail': 'You do not have permission to invite team members.'}, status=status.HTTP_403_FORBIDDEN)
 
-        if not email:
-            return Response({'error': 'email is required'}, status=status.HTTP_400_BAD_REQUEST)
-        if role not in dict(TeamMember.ROLE_CHOICES):
-            return Response({'error': 'Invalid role'}, status=status.HTTP_400_BAD_REQUEST)
-        if not email_provider_configured():
-            return Response(
-                {'error': 'Email provider is not configured', 'detail': 'Invitation email was not sent.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
+        serializer = TeamInviteCreateSerializer(data=request.data, context={'request': request, 'team': team})
+        serializer.is_valid(raise_exception=True)
 
-        sent = send_mail(
-            subject=f'Invitation to join {team.name}',
-            message=f'{request.user.email} invited you to join {team.name} as {role}.',
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
+        token, token_hash = TeamInvite.issue_token()
+        expires_at = timezone.now() + settings.TEAM_INVITE_EXPIRY
+        invite = TeamInvite.objects.create(
+            team=team,
+            email=serializer.validated_data['email'],
+            role=serializer.validated_data['role'],
+            token_hash=token_hash,
+            invited_by=request.user,
+            expires_at=expires_at,
         )
-        if sent != 1:
-            return Response(
-                {'error': 'Invitation email was not sent'},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
 
-        return Response({'message': f'Invitation sent to {email}', 'team': team.name, 'role': role})
+        delivery = send_team_invite_email(invite, token)
+        if delivery['sent']:
+            invite.sent_at = timezone.now()
+            invite.save(update_fields=['sent_at', 'updated_at'])
+
+        response_serializer = TeamInviteSerializer(invite, context={'token': token if can_expose_invite_token() else None})
+        data = response_serializer.data
+        data['delivery'] = delivery
+        if can_expose_invite_token():
+            data['token'] = token
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'])
+    def invites(self, request, pk=None):
+        team = self.get_object()
+        if not self._can_manage_team(team):
+            return Response({'detail': 'You do not have permission to list team invites.'}, status=status.HTTP_403_FORBIDDEN)
+
+        invites = team.invites.select_related('team', 'invited_by', 'accepted_by')
+        serializer = TeamInviteSerializer(invites, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='invites/(?P<invite_id>[^/.]+)/resend')
+    def resend_invite(self, request, pk=None, invite_id=None):
+        team = self.get_object()
+        if not self._can_manage_team(team):
+            return Response({'detail': 'You do not have permission to resend team invites.'}, status=status.HTTP_403_FORBIDDEN)
+
+        invite = team.invites.filter(pk=invite_id).first()
+        if not invite:
+            return Response({'detail': 'Invite not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if invite.status != TeamInvite.STATUS_PENDING:
+            return Response({'detail': f'Invite is {invite.status} and cannot be resent.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        token, token_hash = TeamInvite.issue_token()
+        invite.token_hash = token_hash
+        invite.expires_at = timezone.now() + settings.TEAM_INVITE_EXPIRY
+        invite.save(update_fields=['token_hash', 'expires_at', 'updated_at'])
+
+        delivery = send_team_invite_email(invite, token)
+        if delivery['sent']:
+            invite.sent_at = timezone.now()
+            invite.save(update_fields=['sent_at', 'updated_at'])
+
+        serializer = TeamInviteSerializer(invite, context={'token': token if can_expose_invite_token() else None})
+        data = serializer.data
+        data['delivery'] = delivery
+        if can_expose_invite_token():
+            data['token'] = token
+        return Response(data)
+
+    @action(detail=True, methods=['post'], url_path='invites/(?P<invite_id>[^/.]+)/cancel')
+    def cancel_invite(self, request, pk=None, invite_id=None):
+        team = self.get_object()
+        if not self._can_manage_team(team):
+            return Response({'detail': 'You do not have permission to cancel team invites.'}, status=status.HTTP_403_FORBIDDEN)
+
+        invite = team.invites.filter(pk=invite_id).first()
+        if not invite:
+            return Response({'detail': 'Invite not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if invite.status != TeamInvite.STATUS_PENDING:
+            return Response({'detail': f'Invite is {invite.status} and cannot be canceled.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        invite.status = TeamInvite.STATUS_CANCELED
+        invite.canceled_at = timezone.now()
+        invite.save(update_fields=['status', 'canceled_at', 'updated_at'])
+        return Response(TeamInviteSerializer(invite).data)
 
 
 class TeamMemberViewSet(viewsets.ModelViewSet):
@@ -92,3 +157,37 @@ class TeamMemberViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return (TeamMember.objects.filter(user=self.request.user) | TeamMember.objects.filter(team__owner=self.request.user)).distinct()
+
+
+class TeamInviteViewSet(viewsets.GenericViewSet):
+    queryset = TeamInvite.objects.select_related('team', 'invited_by', 'accepted_by')
+    serializer_class = TeamInviteSerializer
+
+    def get_permissions(self):
+        if self.action == 'validate':
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    @action(detail=False, methods=['post'], url_path='validate')
+    def validate(self, request):
+        serializer = TeamInviteAcceptSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        invite = serializer.context['invite']
+        return Response(TeamInvitePublicSerializer(invite).data)
+
+    @action(detail=False, methods=['post'], url_path='accept')
+    @transaction.atomic
+    def accept(self, request):
+        serializer = TeamInviteAcceptSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        invite = serializer.context['invite']
+
+        if request.user.email.lower() != invite.email.lower():
+            return Response({'detail': 'Invite email does not match the authenticated user.'}, status=status.HTTP_403_FORBIDDEN)
+
+        invite, member = accept_invite_for_user(request.data['token'], request.user)
+
+        return Response({
+            'invite': TeamInviteSerializer(invite).data,
+            'member': TeamMemberSerializer(member).data,
+        })

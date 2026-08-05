@@ -16,6 +16,7 @@ class SearchResult(models.Model):
     SOURCE_CHOICES = [
         ('dehashed', 'Dehashed'),
         ('hibp', 'Have I Been Pwned'),
+        ('intelx', 'Intelligence X'),
         ('internal', 'Internal'),
     ]
 

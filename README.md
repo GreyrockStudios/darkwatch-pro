@@ -9,7 +9,7 @@ DarkWatch Pro is **Phase 3 complete and dev-ready**. The local environment suppo
 Production use still depends on real external services and deployment hardening:
 
 - Stripe checkout/webhooks require live Stripe keys, real price IDs, and webhook endpoint testing.
-- Email/SMS/webhook notifications and team invites are unavailable until a production provider is configured and wired.
+- Email/SMS/webhook notifications need production providers; team invites have a local/dev lifecycle and require SMTP credentials only for real delivery.
 - Threat intelligence/search/monitor checking is honest about missing provider configuration and needs real provider integration for production-grade data.
 - Report generation/download is unavailable until a report backend is configured.
 - Domain Intel and Domain Security are disabled until provider-backed analysis exists.
@@ -79,6 +79,12 @@ cd backend
 celery -A config worker -l info
 celery -A config beat -l info
 ```
+
+## Team Invites
+
+Local development supports persisted team invites without SMTP keys. The default console email backend prints invite messages; set `EMAIL_BACKEND=django.core.mail.backends.filebased.EmailBackend` and `EMAIL_FILE_PATH=backend/tmp/emails` to write messages to disk.
+
+Production SMTP delivery uses the same invite records and token lifecycle. If SMTP is selected without the required host/from/credentials, invite creation still persists but the response includes `delivery.not_configured=true` so the UI can surface a clear delivery problem.
 
 ## Project Structure
 
@@ -161,7 +167,7 @@ The app uses CSS custom properties for theming with a dark/light mode toggle. Se
 - Search stores history, decrements credits, and returns an explicit provider-not-configured state until live threat intelligence is wired.
 - Monitor checks return an explicit provider-not-configured state until live threat intelligence is wired.
 - Domain Intel and Domain Security are frontend unavailable states until provider-backed analysis exists.
-- Team invites and alert notifications require a configured email provider before they return success.
+- Team invites persist locally with tokens, expiry, resend, cancel, and accept; real invite delivery still requires a configured email provider.
 - SMS tests and webhook tests are unavailable until provider-backed implementations exist.
 - Billing plans/subscriptions are persisted locally, but real plan changes require configured Stripe price IDs and live webhook testing.
 - Report generation/download is unavailable until a report backend exists.

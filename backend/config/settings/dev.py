@@ -194,9 +194,13 @@ EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() in ('true', '1'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'alerts@darkwatchpro.com')
+EMAIL_FILE_PATH = os.environ.get('EMAIL_FILE_PATH', str(BASE_DIR / 'tmp' / 'emails'))
+TEAM_INVITE_EXPIRY = timedelta(hours=int(os.environ.get('TEAM_INVITE_EXPIRY_HOURS', '168')))
+TEAM_INVITE_REQUIRE_SMTP_AUTH = os.environ.get('TEAM_INVITE_REQUIRE_SMTP_AUTH', 'False').lower() in ('true', '1', 'yes')
 
 # Reports
 REPORT_GENERATION_ENABLED = os.environ.get('REPORT_GENERATION_ENABLED', 'False').lower() in ('true', '1', 'yes')
+LOCAL_REPORT_GENERATION_ENABLED = os.environ.get('LOCAL_REPORT_GENERATION_ENABLED', 'True').lower() in ('true', '1', 'yes')
 
 # Frontend URL (for Stripe redirect)
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')

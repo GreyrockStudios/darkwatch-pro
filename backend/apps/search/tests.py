@@ -20,6 +20,7 @@ class SearchApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['balance'], 1)
         self.assertFalse(response.data['live'])
+        self.assertTrue(response.data['provider_required'])
         self.assertEqual(SearchResult.objects.filter(user=self.user, query='test@example.com').count(), 1)
 
         self.user.refresh_from_db()
